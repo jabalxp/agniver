@@ -9,7 +9,7 @@
     "providers": {
       "emailPassword": true,
       "googleSignIn": {
-        "oAuthBrandDisplayName": "Agniver",
+        "oAuthBrandDisplayName": "Goro da Mansao",
         "supportEmail": "rafael.adriano2801@gmail.com"
       }
     }
