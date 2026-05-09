@@ -18,12 +18,12 @@ export function MainMenu() {
     }
   }
 
-  const getFirstName = (name: string | null) => {
+  const getFirstName = (name: string | null | undefined) => {
     if (!name) return 'Usuário'
     return name.split(' ')[0]
   }
 
-  const getInitial = (name: string | null) => {
+  const getInitial = (name: string | null | undefined) => {
     if (!name) return 'U'
     return name.charAt(0).toUpperCase()
   }

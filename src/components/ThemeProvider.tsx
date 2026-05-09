@@ -22,7 +22,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.classList.remove(...themeClasses)
     
     // Adiciona a classe do tema atual se não for light (que é o padrão)
-    if (theme !== 'light' && theme !== 'glassmorphism') {
+    if (theme !== 'light') {
       root.classList.add(theme)
     }
   }, [theme, mounted])
@@ -32,7 +32,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={`min-h-screen ${theme === 'glassmorphism' ? 'bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-slate-900 dark:to-indigo-950' : 'bg-background'}`}>
+    <div className="min-h-screen bg-background">
       {children}
     </div>
   )
