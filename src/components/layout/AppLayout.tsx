@@ -20,8 +20,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { theme, setTheme } = useBirthdayStore()
 
   const handleThemeToggle = () => {
-    const themes: ('light' | 'dark' | 'retro' | 'minimalist' | 'glassmorphism')[] = ['light', 'dark', 'retro', 'minimalist', 'glassmorphism']
-    const currentIndex = themes.indexOf(theme)
+    const themes: ('light' | 'dark' | 'sakura' | 'golden' | 'forest')[] = ['light', 'dark', 'sakura', 'golden', 'forest']
+    const currentIndex = themes.indexOf(theme as 'light' | 'dark' | 'sakura' | 'golden' | 'forest')
     setTheme(themes[(currentIndex + 1) % themes.length])
   }
 
