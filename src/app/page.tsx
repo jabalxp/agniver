@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useBirthdayStore, Birthday } from '@/store/useBirthdayStore'
+import { useBirthdayStore, Birthday, UserProfile } from '@/store/useBirthdayStore'
 import { MainMenu } from '@/components/views/MainMenu'
 import { DashboardView } from '@/components/views/DashboardView'
 import { AddView } from '@/components/views/AddView'
