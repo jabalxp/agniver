@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogIn, Mail, Lock, Globe, ArrowLeft, UserPlus, Loader2, UserCheck } from 'lucide-react';
+import { LogIn, Mail, Lock, Globe, ArrowLeft, UserPlus, Loader2 } from 'lucide-react';
 import { useBirthdayStore } from '@/store/useBirthdayStore';
 import { auth, googleProvider } from '@/lib/firebase';
 import {
@@ -27,8 +27,7 @@ export function AuthView() {
     setLoading(true);
     setError('');
     try {
-      if (!auth || typeof auth.name === 'undefined' && !auth.app) {
-        // Modo offline: login local simulado com segurança
+      if (!auth || !auth.app) {
         setUser({
           uid: 'offline-user-google',
           email: 'usuario.google@agniver.app',
@@ -70,7 +69,7 @@ export function AuthView() {
     setLoading(true);
     setError('');
     try {
-      if (!auth || typeof auth.name === 'undefined' && !auth.app) {
+      if (!auth || !auth.app) {
         const userName = name.trim() || email.split('@')[0];
         setUser({
           uid: `offline-user-${Date.now()}`,
