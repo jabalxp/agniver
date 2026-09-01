@@ -60,96 +60,129 @@ interface BirthdayState {
   editingId: string | null;
   user: UserInfo | null;
   userProfile: UserProfile | null;
-  loading: boolean;
 
   // Actions
-  addBirthday: (birthday: Omit<Birthday, 'id' | 'createdAt'>) => Promise<void>;
-  removeBirthday: (id: string) => Promise<void>;
-  updateBirthday: (id: string, birthday: Partial<Birthday>) => Promise<void>;
-  toggleFavorite: (id: string) => Promise<void>;
-  importBirthdays: (items: Array<Omit<Birthday, 'id' | 'createdAt'>>) => Promise<void>;
-  clearAllBirthdays: () => Promise<void>;
-  
-  // Wishlist Actions
-  addWishlistItem: (birthdayId: string, item: Omit<WishlistItem, 'id'>) => Promise<void>;
-  updateWishlistItem: (birthdayId: string, itemId: string, item: Partial<WishlistItem>) => Promise<void>;
-  removeWishlistItem: (birthdayId: string, itemId: string) => Promise<void>;
-
-  // View & Theme Actions
   setTheme: (theme: ThemeType) => void;
   setActiveView: (view: ViewType) => void;
   setEditingId: (id: string | null) => void;
   setUser: (user: UserInfo | null) => void;
   setUserProfile: (profile: UserProfile | null) => void;
-  setBirthdays: (birthdays: Birthday[]) => void;
-  setLoading: (loading: boolean) => void;
+
+  // CRUD
+  addBirthday: (birthday: Omit<Birthday, 'id' | 'createdAt'>) => Promise<void>;
+  removeBirthday: (id: string) => Promise<void>;
+  updateBirthday: (id: string, updatedBirthday: Partial<Birthday>) => Promise<void>;
+  toggleFavorite: (id: string) => Promise<void>;
+  importBirthdays: (items: Omit<Birthday, 'id' | 'createdAt'>[]) => Promise<void>;
+  clearAllBirthdays: () => Promise<void>;
+
+  // Wishlist Actions
+  addWishlistItem: (birthdayId: string, item: Omit<WishlistItem, 'id'>) => Promise<void>;
+  updateWishlistItem: (birthdayId: string, itemId: string, item: Partial<WishlistItem>) => Promise<void>;
+  removeWishlistItem: (birthdayId: string, itemId: string) => Promise<void>;
 }
 
-const INITIAL_BIRTHDAYS: Birthday[] = [
+const INITIAL_MOCK_BIRTHDAYS: Birthday[] = [
   {
-    id: 'bday-1',
-    name: 'Ana Paula Silva',
-    date: '1996-03-15',
-    phone: '11988887777',
+    id: 'mock-1',
+    name: 'Ana Carolina Silva',
+    date: '1998-03-15',
+    phone: '(11) 98765-4321',
     color: '#ec4899',
-    notes: 'Adora café especial e livros de ficção científica.',
+    notes: 'Ama café especial, livros de ficção científica e suculentas.',
     isFavorite: true,
     tags: ['Amigos', 'VIP'],
     wishlist: [
-      { id: 'w1', title: 'Prensa Francesa de Inox', price: 120, status: 'wished' },
-      { id: 'w2', title: 'Livro Duna - Edição Especial', price: 85, status: 'purchased' }
+      { id: 'w1', title: 'Kit Café Gourmet em Grãos', price: 65, status: 'purchased' },
+      { id: 'w2', title: 'Livro Duna - Edição de Luxo', price: 90, status: 'wished' },
     ],
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'bday-2',
-    name: 'Lucas Oliveira',
-    date: '1992-06-28',
-    phone: '21977776666',
+    id: 'mock-2',
+    name: 'Lucas Eduardo Santos',
+    date: '1995-03-18',
+    phone: '(21) 99887-6655',
     color: '#3b82f6',
-    notes: 'Pratica corrida e ciclismo. Fã de gadgets de tecnologia.',
-    isFavorite: false,
-    tags: ['Trabalho'],
+    notes: 'Gosta de jogos de tabuleiro, cerveja artesanal e fones de ouvido.',
+    isFavorite: true,
+    tags: ['Amigos', 'Trabalho'],
     wishlist: [
-      { id: 'w3', title: 'Meias de Compressão DryFit', price: 60, status: 'wished' }
+      { id: 'w3', title: 'Jogo Catan / Dixit', price: 180, status: 'wished' },
     ],
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'bday-3',
-    name: 'Mariana Costa',
-    date: '1998-12-25',
-    phone: '31966665555',
-    color: '#f59e0b',
-    notes: 'Aniversário no Natal! Não esquecer de dar presente duplo.',
+    id: 'mock-3',
+    name: 'Mariana Oliveira',
+    date: '2001-04-02',
+    phone: '(31) 97123-8899',
+    color: '#8b5cf6',
+    notes: 'Fã de fotografia e posters minimalistas.',
+    isFavorite: false,
+    tags: ['Faculdade'],
+    wishlist: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-4',
+    name: 'Roberto Souza (Pai)',
+    date: '1968-04-10',
+    phone: '(11) 99111-2233',
+    color: '#10b981',
+    notes: 'Gosta de churrasco, ferramentas e camisas polo tamanho G.',
     isFavorite: true,
     tags: ['Família', 'VIP'],
     wishlist: [
-      { id: 'w4', title: 'Fones Bluetooth com Cancelamento de Ruído', price: 299, status: 'wished' }
+      { id: 'w4', title: 'Kit Faca Artesanal de Churrasco', price: 140, status: 'delivered' },
     ],
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'bday-4',
-    name: 'Gabriel Santos',
-    date: '1995-09-10',
-    phone: '41955554444',
-    color: '#10b981',
-    notes: 'Coleciona vinis de rock clássico e jogos de tabuleiro.',
+    id: 'mock-5',
+    name: 'Beatriz Costa',
+    date: '2000-05-22',
+    phone: '(41) 98444-5566',
+    color: '#f59e0b',
+    notes: 'Adora velas aromáticas e itens de papelaria.',
     isFavorite: false,
     tags: ['Amigos'],
     wishlist: [],
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'bday-5',
-    name: 'Beatriz Lima',
-    date: '2001-11-04',
-    phone: '51944443333',
-    color: '#8b5cf6',
-    notes: 'Gosta de arte, aquarela e plantas para apartamento.',
+    id: 'mock-6',
+    name: 'Gabriel Martins',
+    date: '1996-08-14',
+    phone: '(11) 97654-3210',
+    color: '#06b6d4',
+    notes: 'Programador, gosta de teclados mecânicos e mousepads grandes.',
+    isFavorite: false,
+    tags: ['Trabalho'],
+    wishlist: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-7',
+    name: 'Juliana Mendes',
+    date: '1992-11-05',
+    phone: '(85) 99222-3344',
+    color: '#f97316',
+    notes: 'Gosta de vinhos secos e chocolates com alta porcentagem de cacau.',
     isFavorite: false,
     tags: ['Família'],
+    wishlist: [],
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock-8',
+    name: 'Fernando Rocha',
+    date: '1990-12-25',
+    phone: '(11) 98111-9988',
+    color: '#ef4444',
+    notes: 'Aniversário no Natal! Não esquecer de dar parabéns duplo.',
+    isFavorite: true,
+    tags: ['Amigos', 'VIP'],
     wishlist: [],
     createdAt: new Date().toISOString(),
   },
@@ -158,26 +191,34 @@ const INITIAL_BIRTHDAYS: Birthday[] = [
 export const useBirthdayStore = create<BirthdayState>()(
   persist(
     (set, get) => ({
-      birthdays: INITIAL_BIRTHDAYS,
+      birthdays: INITIAL_MOCK_BIRTHDAYS,
       theme: 'dark',
       activeView: 'menu',
       editingId: null,
       user: null,
-      userProfile: null,
-      loading: false,
+      userProfile: {
+        name: 'Rafael Adriano',
+        birthDate: '1995-06-15',
+      },
 
-      addBirthday: async (birthday) => {
+      setTheme: (theme) => set({ theme }),
+      setActiveView: (activeView) => set({ activeView }),
+      setEditingId: (editingId) => set({ editingId }),
+      setUser: (user) => set({ user }),
+      setUserProfile: (userProfile) => set({ userProfile }),
+
+      addBirthday: async (birthdayData) => {
         const { user } = get();
         const newBirthday: Birthday = {
-          ...birthday,
+          ...birthdayData,
           id: crypto.randomUUID(),
-          isFavorite: birthday.isFavorite ?? false,
-          tags: birthday.tags ?? [],
-          wishlist: birthday.wishlist ?? [],
+          isFavorite: birthdayData.isFavorite ?? false,
+          tags: birthdayData.tags ?? [],
+          wishlist: birthdayData.wishlist ?? [],
           createdAt: new Date().toISOString(),
         };
 
-        if (user) {
+        if (user && db && db.app) {
           try {
             await addDoc(collection(db, 'users', user.uid, 'birthdays'), newBirthday);
           } catch (e) {
@@ -192,7 +233,7 @@ export const useBirthdayStore = create<BirthdayState>()(
 
       removeBirthday: async (id) => {
         const { user } = get();
-        if (user) {
+        if (user && db && db.app) {
           try {
             await deleteDoc(doc(db, 'users', user.uid, 'birthdays', id));
           } catch (e) {
@@ -206,7 +247,7 @@ export const useBirthdayStore = create<BirthdayState>()(
 
       updateBirthday: async (id, updatedBirthday) => {
         const { user } = get();
-        if (user) {
+        if (user && db && db.app) {
           try {
             await updateDoc(doc(db, 'users', user.uid, 'birthdays', id), updatedBirthday);
           } catch (e) {
@@ -224,7 +265,7 @@ export const useBirthdayStore = create<BirthdayState>()(
         if (!birthday) return;
 
         const newFav = !birthday.isFavorite;
-        if (user) {
+        if (user && db && db.app) {
           try {
             await updateDoc(doc(db, 'users', user.uid, 'birthdays', id), { isFavorite: newFav });
           } catch (e) {
@@ -247,7 +288,7 @@ export const useBirthdayStore = create<BirthdayState>()(
           createdAt: new Date().toISOString(),
         }));
 
-        if (user) {
+        if (user && db && db.app) {
           for (const b of newBirthdays) {
             try {
               await addDoc(collection(db, 'users', user.uid, 'birthdays'), b);
@@ -280,13 +321,13 @@ export const useBirthdayStore = create<BirthdayState>()(
         await updateBirthday(birthdayId, { wishlist: updatedList });
       },
 
-      updateWishlistItem: async (birthdayId, itemId, updatedFields) => {
+      updateWishlistItem: async (birthdayId, itemId, itemChanges) => {
         const { birthdays, updateBirthday } = get();
         const target = birthdays.find((b) => b.id === birthdayId);
-        if (!target) return;
+        if (!target || !target.wishlist) return;
 
-        const updatedList = (target.wishlist || []).map((w) =>
-          w.id === itemId ? { ...w, ...updatedFields } : w
+        const updatedList = target.wishlist.map((item) =>
+          item.id === itemId ? { ...item, ...itemChanges } : item
         );
         await updateBirthday(birthdayId, { wishlist: updatedList });
       },
@@ -294,27 +335,14 @@ export const useBirthdayStore = create<BirthdayState>()(
       removeWishlistItem: async (birthdayId, itemId) => {
         const { birthdays, updateBirthday } = get();
         const target = birthdays.find((b) => b.id === birthdayId);
-        if (!target) return;
+        if (!target || !target.wishlist) return;
 
-        const updatedList = (target.wishlist || []).filter((w) => w.id !== itemId);
+        const updatedList = target.wishlist.filter((item) => item.id !== itemId);
         await updateBirthday(birthdayId, { wishlist: updatedList });
       },
-
-      setTheme: (theme) => set({ theme }),
-      setActiveView: (view) => set({ activeView: view }),
-      setEditingId: (id) => set({ editingId: id }),
-      setUser: (user) => set({ user }),
-      setUserProfile: (userProfile) => set({ userProfile }),
-      setBirthdays: (birthdays) => set({ birthdays }),
-      setLoading: (loading) => set({ loading }),
     }),
     {
       name: 'agniver-storage',
-      partialize: (state) => ({
-        theme: state.theme,
-        birthdays: state.birthdays,
-        userProfile: state.userProfile,
-      }),
     }
   )
 );

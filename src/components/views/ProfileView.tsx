@@ -30,7 +30,7 @@ export function ProfileView() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (user) {
+      if (user && db && db.app) {
         try {
           await updateDoc(doc(db, 'users', user.uid), {
             name,

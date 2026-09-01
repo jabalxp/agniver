@@ -25,11 +25,14 @@ export function MainMenu() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      if (auth && auth.app) {
+        await signOut(auth);
+      }
+    } catch (error) {
+      console.warn('Logout local:', error);
+    } finally {
       setUser(null);
       toast.info('Você saiu da sua conta.');
-    } catch (error) {
-      console.error('Erro ao sair:', error);
     }
   };
 
