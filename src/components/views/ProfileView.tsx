@@ -1,99 +1,112 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Calendar, User, Save, ArrowLeft, Loader2, UserCircle } from 'lucide-react'
-import { useBirthdayStore } from '@/store/useBirthdayStore'
-import { db } from '@/lib/firebase'
-import { doc, updateDoc } from 'firebase/firestore'
-import { ViewLayout } from '@/components/views/ViewLayout'
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Calendar, User, Save, ArrowLeft, Loader2, UserCircle } from 'lucide-react';
+import { useBirthdayStore } from '@/store/useBirthdayStore';
+import { db } from '@/lib/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { ViewLayout } from '@/components/views/ViewLayout';
+import { toast } from '@/store/useToastStore';
 
 export function ProfileView() {
-  const { user, userProfile, setActiveView } = useBirthdayStore()
-  const [loading, setLoading] = useState(false)
-  const [name, setName] = useState('')
-  const [birthDate, setBirthDate] = useState('')
+  const { user, userProfile, setUserProfile, setActiveView } = useBirthdayStore();
+  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
 
   useEffect(() => {
     if (userProfile) {
-      setName(userProfile.name)
-      setBirthDate(userProfile.birthDate)
+      setName(userProfile.name);
+      setBirthDate(userProfile.birthDate);
+    } else if (user) {
+      setName(user.displayName || '');
     }
-  }, [userProfile])
+  }, [userProfile, user]);
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) return
-    
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
     try {
-      await updateDoc(doc(db, 'users', user.uid), {
+      if (user) {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            name,
+            birthDate,
+          });
+        } catch (e) {
+          console.warn('Fallback para armazenamento local:', e);
+        }
+      }
+
+      setUserProfile({
         name,
-        birthDate
-      })
-      alert('Perfil atualizado com sucesso, General!')
-      setActiveView('menu')
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error)
-      alert('Erro ao atualizar perfil.')
+        birthDate,
+      });
+
+      toast.success('Perfil atualizado com sucesso! ✨');
+      setActiveView('menu');
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
+      toast.error('Erro ao atualizar perfil: ' + error.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <ViewLayout 
-      title="Seu Perfil" 
-      subtitle="Gerencie suas informações pessoais aqui."
+    <ViewLayout
+      title="Seu Perfil"
+      subtitle="Gerencie suas informações pessoais e data de nascimento."
       hideBackButton={true}
     >
-      <div className="max-w-2xl mx-auto">
-        <button 
+      <div className="max-w-xl mx-auto my-4">
+        <button
           onClick={() => setActiveView('menu')}
-          className="flex items-center gap-2 text-foreground/40 hover:text-primary transition-colors mb-8 font-bold text-sm"
+          className="inline-flex items-center gap-2 text-foreground/50 hover:text-primary transition-colors mb-6 font-bold text-xs"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
         </button>
 
         <motion.form
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           onSubmit={handleUpdate}
-          className="bg-card/40 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 md:p-12 shadow-2xl space-y-8"
+          className="bg-card/40 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 md:p-10 shadow-2xl space-y-6"
         >
-          <div className="flex items-center gap-6 mb-4">
-            <div className="w-20 h-20 rounded-3xl overflow-hidden bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="flex items-center gap-5 pb-4 border-b border-border/40">
+            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0 shadow-md">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <UserCircle className="w-12 h-12 text-primary" />
+                <UserCircle className="w-10 h-10 text-primary" />
               )}
             </div>
-            <div>
-              <h2 className="text-2xl font-bold">{userProfile?.name}</h2>
-              <p className="text-foreground/40 text-sm font-medium">{user?.email}</p>
+            <div className="min-w-0">
+              <h2 className="text-xl font-extrabold text-foreground truncate">{userProfile?.name || name || 'Usuário'}</h2>
+              <p className="text-foreground/40 text-xs font-medium truncate">{user?.email || 'Armazenamento Local'}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold flex items-center gap-2 ml-1 text-foreground/70">
-                <User className="w-4 h-4 text-primary" /> Nome de Exibição
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-1.5 ml-1">
+                <User className="w-3.5 h-3.5 text-primary" /> Nome de Exibição
               </label>
               <input
                 required
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-6 py-4 bg-foreground/5 border border-border/50 rounded-2xl focus:ring-2 focus:ring-primary/50 outline-none transition-all font-medium"
+                className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold flex items-center gap-2 ml-1 text-foreground/70">
-                <Calendar className="w-4 h-4 text-primary" /> Sua Data de Nascimento
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-1.5 ml-1">
+                <Calendar className="w-3.5 h-3.5 text-primary" /> Sua Data de Nascimento
               </label>
               <input
                 required
@@ -101,22 +114,22 @@ export function ProfileView() {
                 max={todayStr}
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full px-6 py-4 bg-foreground/5 border border-border/50 rounded-2xl focus:ring-2 focus:ring-primary/50 outline-none transition-all font-medium"
+                className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               />
             </div>
           </div>
 
-          <div className="pt-6 border-t border-border/50">
+          <div className="pt-4 border-t border-border/40">
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-primary to-accent text-white py-5 px-8 rounded-2xl font-bold text-lg transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-primary/20 disabled:opacity-50"
+              className="w-full py-4 px-6 rounded-2xl bg-primary text-primary-foreground font-bold text-sm transition-all hover:opacity-90 shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <Save className="w-6 h-6" /> Salvar Alterações
+                  <Save className="w-4 h-4" /> Salvar Alterações
                 </>
               )}
             </button>
@@ -124,5 +137,5 @@ export function ProfileView() {
         </motion.form>
       </div>
     </ViewLayout>
-  )
+  );
 }
