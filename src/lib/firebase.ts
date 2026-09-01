@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDummyKeyForOfflineFirstMode12345',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyB93JHyGCIHLJBlFcY3yZwWC4oFUp1SB7s',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'agniver.firebaseapp.com',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'agniver',
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'agniver.firebasestorage.app',
