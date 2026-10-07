@@ -4,18 +4,19 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { LogIn, Mail, Lock, Globe, ArrowLeft, UserPlus, Loader2 } from 'lucide-react';
 import { useBirthdayStore } from '@/store/useBirthdayStore';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth, googleProvider, db } from '@/lib/firebase';
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
 } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { ViewLayout } from '@/components/views/ViewLayout';
 import { toast } from '@/store/useToastStore';
 
 export function AuthView() {
-  const { setActiveView, setUser, setUserProfile } = useBirthdayStore();
+  const { user, setActiveView, setUser, setUserProfile } = useBirthdayStore();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -47,6 +48,27 @@ export function AuthView() {
         displayName: firebaseUser.displayName,
         photoURL: firebaseUser.photoURL,
       });
+
+      if (db && db.app) {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setUserProfile({
+            name: data.name || firebaseUser.displayName || 'Usuário',
+            birthDate: data.birthDate || '',
+            photoURL: data.photoURL ?? firebaseUser.photoURL,
+          });
+        } else {
+          await setDoc(userDocRef, {
+            name: firebaseUser.displayName || 'Usuário',
+            photoURL: firebaseUser.photoURL || null,
+            email: firebaseUser.email,
+            createdAt: new Date().toISOString(),
+          }, { merge: true });
+        }
+      }
+
       toast.success(`Bem-vindo, ${firebaseUser.displayName || 'amigo'}! 🎉`);
       setActiveView('menu');
     } catch (err: any) {
@@ -106,6 +128,22 @@ export function AuthView() {
           displayName: name,
           photoURL: null,
         });
+
+        if (db && db.app) {
+          await setDoc(doc(db, 'users', firebaseUser.uid), {
+            name: name,
+            birthDate: '',
+            photoURL: null,
+            email: firebaseUser.email,
+            createdAt: new Date().toISOString(),
+          }, { merge: true });
+        }
+
+        setUserProfile({
+          name: name,
+          birthDate: '',
+          photoURL: null,
+        });
         toast.success(`Conta criada com sucesso! 🎂`);
       }
       setActiveView('menu');
@@ -120,7 +158,7 @@ export function AuthView() {
       });
       setUserProfile({
         name: userName,
-        birthDate: '2000-01-01',
+        birthDate: '',
       });
       toast.success(`Bem-vindo, ${userName}! (Modo Local Offline)`);
       setActiveView('menu');
@@ -143,12 +181,14 @@ export function AuthView() {
         animate={{ opacity: 1, scale: 1 }}
         className="max-w-md mx-auto bg-card/40 backdrop-blur-xl border border-border rounded-[2.5rem] p-8 shadow-2xl my-4"
       >
-        <button
-          onClick={() => setActiveView('menu')}
-          className="inline-flex items-center gap-2 text-foreground/40 hover:text-primary transition-colors mb-6 text-xs font-bold"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
-        </button>
+        {user && (
+          <button
+            onClick={() => setActiveView('menu')}
+            className="inline-flex items-center gap-2 text-foreground/40 hover:text-primary transition-colors mb-6 text-xs font-bold"
+          >
+            <ArrowLeft className="w-4 h-4" /> Voltar ao Menu
+          </button>
+        )}
 
         {error && (
           <div className="mb-6 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-xs font-semibold">

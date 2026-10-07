@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  onSnapshot,
+} from 'firebase/firestore';
 
 export interface WishlistItem {
   id: string;
@@ -16,17 +22,30 @@ export interface Birthday {
   name: string;
   date: string; // YYYY-MM-DD
   phone?: string;
+  nickname?: string;
+  interests?: string[];
+  memories?: string;
   color: string;
   notes: string;
+  photo?: string;
   isFavorite?: boolean;
   tags?: string[];
   wishlist?: WishlistItem[];
   createdAt: string;
 }
 
+export interface CustomMessageTemplate {
+  id: string;
+  title: string;
+  category: 'carinhoso' | 'divertido' | 'formal' | 'curto' | 'emocionante' | 'custom';
+  content: string;
+  isFavorite?: boolean;
+}
+
 export interface UserProfile {
   name: string;
   birthDate: string;
+  photoURL?: string | null;
 }
 
 export type ThemeType = 'light' | 'dark' | 'sakura' | 'golden' | 'forest';
@@ -46,7 +65,7 @@ export type ViewType =
   | 'timeline'
   | 'stats';
 
-interface UserInfo {
+export interface UserInfo {
   uid: string;
   email: string | null;
   displayName: string | null;
@@ -55,11 +74,13 @@ interface UserInfo {
 
 interface BirthdayState {
   birthdays: Birthday[];
+  isLoadingBirthdays: boolean;
   theme: ThemeType;
   activeView: ViewType;
   editingId: string | null;
   user: UserInfo | null;
   userProfile: UserProfile | null;
+  customTemplates: CustomMessageTemplate[];
 
   // Actions
   setTheme: (theme: ThemeType) => void;
@@ -67,6 +88,8 @@ interface BirthdayState {
   setEditingId: (id: string | null) => void;
   setUser: (user: UserInfo | null) => void;
   setUserProfile: (profile: UserProfile | null) => void;
+  updateUserProfilePhoto: (photoURL: string | null) => void;
+  initUserSync: (uid: string) => () => void;
 
   // CRUD
   addBirthday: (birthday: Omit<Birthday, 'id' | 'createdAt'>) => Promise<void>;
@@ -80,138 +103,154 @@ interface BirthdayState {
   addWishlistItem: (birthdayId: string, item: Omit<WishlistItem, 'id'>) => Promise<void>;
   updateWishlistItem: (birthdayId: string, itemId: string, item: Partial<WishlistItem>) => Promise<void>;
   removeWishlistItem: (birthdayId: string, itemId: string) => Promise<void>;
+
+  // Template Actions
+  addCustomTemplate: (template: Omit<CustomMessageTemplate, 'id'>) => void;
+  removeCustomTemplate: (id: string) => void;
+  toggleFavoriteTemplate: (id: string) => void;
 }
 
-const INITIAL_MOCK_BIRTHDAYS: Birthday[] = [
+const DEFAULT_TEMPLATES: CustomMessageTemplate[] = [
   {
-    id: 'mock-1',
-    name: 'Ana Carolina Silva',
-    date: '1998-03-15',
-    phone: '(11) 98765-4321',
-    color: '#ec4899',
-    notes: 'Ama café especial, livros de ficção científica e suculentas.',
+    id: 't-carinhoso',
+    title: 'Carinhoso & Amigo',
+    category: 'carinhoso',
+    content: 'Feliz aniversário, {nome}! 🎂 Que a vida te presenteie com muita saúde, paz e momentos especiais. É um privilégio ter você por perto! Aproveite muito seu dia!',
     isFavorite: true,
-    tags: ['Amigos', 'VIP'],
-    wishlist: [
-      { id: 'w1', title: 'Kit Café Gourmet em Grãos', price: 65, status: 'purchased' },
-      { id: 'w2', title: 'Livro Duna - Edição de Luxo', price: 90, status: 'wished' },
-    ],
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'mock-2',
-    name: 'Lucas Eduardo Santos',
-    date: '1995-03-18',
-    phone: '(21) 99887-6655',
-    color: '#3b82f6',
-    notes: 'Gosta de jogos de tabuleiro, cerveja artesanal e fones de ouvido.',
+    id: 't-divertido',
+    title: 'Divertido & Espontâneo',
+    category: 'divertido',
+    content: 'Parabéns pelos seus {idade} anos, {nome}! 🥳 Mais um ano acumulando histórias, sabedoria e juventude acumulada. A comemoração é por sua conta!',
     isFavorite: true,
-    tags: ['Amigos', 'Trabalho'],
-    wishlist: [
-      { id: 'w3', title: 'Jogo Catan / Dixit', price: 180, status: 'wished' },
-    ],
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'mock-3',
-    name: 'Mariana Oliveira',
-    date: '2001-04-02',
-    phone: '(31) 97123-8899',
-    color: '#8b5cf6',
-    notes: 'Fã de fotografia e posters minimalistas.',
+    id: 't-formal',
+    title: 'Formal & Profissional',
+    category: 'formal',
+    content: 'Prezado(a) {nome}, desejo um feliz aniversário! Que seu novo ciclo venha acompanhado de muitas realizações pessoais e profissionais com grande sucesso.',
     isFavorite: false,
-    tags: ['Faculdade'],
-    wishlist: [],
-    createdAt: new Date().toISOString(),
   },
   {
-    id: 'mock-4',
-    name: 'Roberto Souza (Pai)',
-    date: '1968-04-10',
-    phone: '(11) 99111-2233',
-    color: '#10b981',
-    notes: 'Gosta de churrasco, ferramentas e camisas polo tamanho G.',
+    id: 't-curto',
+    title: 'Curto & Direto',
+    category: 'curto',
+    content: 'Parabéns, {nome}! Muita saúde, alegria e sucesso no seu dia e no novo ano que começa. Grande abraço! 🎉',
+    isFavorite: false,
+  },
+  {
+    id: 't-emocionante',
+    title: 'Emocionante & Profundo',
+    category: 'emocionante',
+    content: '{nome}, hoje celebramos a sua existência! Sou imensamente grato(a) por sua amizade e por todas as memórias que compartilhamos. Que seu coração se encha de alegria hoje e sempre! ❤️',
     isFavorite: true,
-    tags: ['Família', 'VIP'],
-    wishlist: [
-      { id: 'w4', title: 'Kit Faca Artesanal de Churrasco', price: 140, status: 'delivered' },
-    ],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'mock-5',
-    name: 'Beatriz Costa',
-    date: '2000-05-22',
-    phone: '(41) 98444-5566',
-    color: '#f59e0b',
-    notes: 'Adora velas aromáticas e itens de papelaria.',
-    isFavorite: false,
-    tags: ['Amigos'],
-    wishlist: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'mock-6',
-    name: 'Gabriel Martins',
-    date: '1996-08-14',
-    phone: '(11) 97654-3210',
-    color: '#06b6d4',
-    notes: 'Programador, gosta de teclados mecânicos e mousepads grandes.',
-    isFavorite: false,
-    tags: ['Trabalho'],
-    wishlist: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'mock-7',
-    name: 'Juliana Mendes',
-    date: '1992-11-05',
-    phone: '(85) 99222-3344',
-    color: '#f97316',
-    notes: 'Gosta de vinhos secos e chocolates com alta porcentagem de cacau.',
-    isFavorite: false,
-    tags: ['Família'],
-    wishlist: [],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'mock-8',
-    name: 'Fernando Rocha',
-    date: '1990-12-25',
-    phone: '(11) 98111-9988',
-    color: '#ef4444',
-    notes: 'Aniversário no Natal! Não esquecer de dar parabéns duplo.',
-    isFavorite: true,
-    tags: ['Amigos', 'VIP'],
-    wishlist: [],
-    createdAt: new Date().toISOString(),
   },
 ];
 
 export const useBirthdayStore = create<BirthdayState>()(
   persist(
     (set, get) => ({
-      birthdays: INITIAL_MOCK_BIRTHDAYS,
+      birthdays: [],
+      isLoadingBirthdays: false,
       theme: 'dark',
       activeView: 'menu',
       editingId: null,
       user: null,
-      userProfile: {
-        name: 'Rafael Adriano',
-        birthDate: '1995-06-15',
-      },
+      userProfile: null,
+      customTemplates: DEFAULT_TEMPLATES,
 
       setTheme: (theme) => set({ theme }),
       setActiveView: (activeView) => set({ activeView }),
       setEditingId: (editingId) => set({ editingId }),
-      setUser: (user) => set({ user }),
+      setUser: (user) => {
+        if (!user) {
+          set({ user: null, userProfile: null, birthdays: [] });
+        } else {
+          set({ user });
+        }
+      },
       setUserProfile: (userProfile) => set({ userProfile }),
+      updateUserProfilePhoto: (photoURL) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, photoURL } : null,
+          userProfile: state.userProfile ? { ...state.userProfile, photoURL } : null,
+        })),
+
+      initUserSync: (uid: string) => {
+        if (!db || !db.app || !uid) {
+          return () => {};
+        }
+
+        set({ isLoadingBirthdays: true });
+
+        const birthdaysRef = collection(db, 'users', uid, 'birthdays');
+        const unsubBirthdays = onSnapshot(
+          birthdaysRef,
+          (snapshot) => {
+            const list: Birthday[] = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              list.push({
+                id: docSnap.id,
+                name: data.name || '',
+                date: data.date || '',
+                phone: data.phone || '',
+                nickname: data.nickname || '',
+                interests: data.interests || [],
+                memories: data.memories || '',
+                color: data.color || '#3b82f6',
+                notes: data.notes || '',
+                photo: data.photo || '',
+                isFavorite: data.isFavorite ?? false,
+                tags: data.tags || [],
+                wishlist: data.wishlist || [],
+                createdAt: data.createdAt || new Date().toISOString(),
+              });
+            });
+            set({ birthdays: list, isLoadingBirthdays: false });
+          },
+          (err) => {
+            console.error('Erro na sincronização de aniversários:', err);
+            set({ isLoadingBirthdays: false });
+          }
+        );
+
+        const userDocRef = doc(db, 'users', uid);
+        const unsubProfile = onSnapshot(
+          userDocRef,
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data();
+              set({
+                userProfile: {
+                  name: data.name || '',
+                  birthDate: data.birthDate || '',
+                  photoURL: data.photoURL ?? null,
+                },
+              });
+            }
+          },
+          (err) => {
+            console.warn('Erro ao carregar perfil do Firestore:', err);
+          }
+        );
+
+        return () => {
+          unsubBirthdays();
+          unsubProfile();
+        };
+      },
 
       addBirthday: async (birthdayData) => {
         const { user } = get();
+        const newId = crypto.randomUUID();
         const newBirthday: Birthday = {
           ...birthdayData,
-          id: crypto.randomUUID(),
+          id: newId,
+          nickname: birthdayData.nickname || '',
+          interests: birthdayData.interests || [],
+          memories: birthdayData.memories || '',
           isFavorite: birthdayData.isFavorite ?? false,
           tags: birthdayData.tags ?? [],
           wishlist: birthdayData.wishlist ?? [],
@@ -220,15 +259,16 @@ export const useBirthdayStore = create<BirthdayState>()(
 
         if (user && db && db.app) {
           try {
-            await addDoc(collection(db, 'users', user.uid, 'birthdays'), newBirthday);
+            await setDoc(doc(db, 'users', user.uid, 'birthdays', newId), newBirthday);
           } catch (e) {
             console.warn('Fallback para local storage:', e);
           }
         }
 
-        set((state) => ({
-          birthdays: [newBirthday, ...state.birthdays],
-        }));
+        set((state) => {
+          if (state.birthdays.some((b) => b.id === newId)) return state;
+          return { birthdays: [newBirthday, ...state.birthdays] };
+        });
       },
 
       removeBirthday: async (id) => {
@@ -249,7 +289,7 @@ export const useBirthdayStore = create<BirthdayState>()(
         const { user } = get();
         if (user && db && db.app) {
           try {
-            await updateDoc(doc(db, 'users', user.uid, 'birthdays', id), updatedBirthday);
+            await setDoc(doc(db, 'users', user.uid, 'birthdays', id), updatedBirthday, { merge: true });
           } catch (e) {
             console.warn('Fallback para local storage:', e);
           }
@@ -267,7 +307,7 @@ export const useBirthdayStore = create<BirthdayState>()(
         const newFav = !birthday.isFavorite;
         if (user && db && db.app) {
           try {
-            await updateDoc(doc(db, 'users', user.uid, 'birthdays', id), { isFavorite: newFav });
+            await setDoc(doc(db, 'users', user.uid, 'birthdays', id), { isFavorite: newFav }, { merge: true });
           } catch (e) {
             console.warn('Fallback para local storage:', e);
           }
@@ -282,6 +322,9 @@ export const useBirthdayStore = create<BirthdayState>()(
         const newBirthdays: Birthday[] = items.map((item) => ({
           ...item,
           id: crypto.randomUUID(),
+          nickname: item.nickname || '',
+          interests: item.interests || [],
+          memories: item.memories || '',
           isFavorite: item.isFavorite ?? false,
           tags: item.tags ?? [],
           wishlist: item.wishlist ?? [],
@@ -291,7 +334,7 @@ export const useBirthdayStore = create<BirthdayState>()(
         if (user && db && db.app) {
           for (const b of newBirthdays) {
             try {
-              await addDoc(collection(db, 'users', user.uid, 'birthdays'), b);
+              await setDoc(doc(db, 'users', user.uid, 'birthdays', b.id), b);
             } catch (e) {
               console.warn(e);
             }
@@ -304,6 +347,16 @@ export const useBirthdayStore = create<BirthdayState>()(
       },
 
       clearAllBirthdays: async () => {
+        const { user, birthdays } = get();
+        if (user && db && db.app) {
+          for (const b of birthdays) {
+            try {
+              await deleteDoc(doc(db, 'users', user.uid, 'birthdays', b.id));
+            } catch (e) {
+              console.warn('Erro ao limpar aniversário do banco:', e);
+            }
+          }
+        }
         set({ birthdays: [] });
       },
 
@@ -340,9 +393,42 @@ export const useBirthdayStore = create<BirthdayState>()(
         const updatedList = target.wishlist.filter((item) => item.id !== itemId);
         await updateBirthday(birthdayId, { wishlist: updatedList });
       },
+
+      addCustomTemplate: (template) =>
+        set((state) => ({
+          customTemplates: [
+            ...state.customTemplates,
+            { ...template, id: crypto.randomUUID() },
+          ],
+        })),
+
+      removeCustomTemplate: (id) =>
+        set((state) => ({
+          customTemplates: state.customTemplates.filter((t) => t.id !== id),
+        })),
+
+      toggleFavoriteTemplate: (id) =>
+        set((state) => ({
+          customTemplates: state.customTemplates.map((t) =>
+            t.id === id ? { ...t, isFavorite: !t.isFavorite } : t
+          ),
+        })),
     }),
     {
       name: 'agniver-storage',
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          if (state.birthdays && Array.isArray(state.birthdays)) {
+            state.birthdays = state.birthdays.filter((b) => !b.id.startsWith('mock-'));
+          }
+          if (state.userProfile?.name === 'Rafael Adriano') {
+            state.userProfile = null;
+          }
+          if (!state.customTemplates || state.customTemplates.length === 0) {
+            state.customTemplates = DEFAULT_TEMPLATES;
+          }
+        }
+      },
     }
   )
 );

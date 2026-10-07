@@ -12,16 +12,57 @@ export function ChangelogView() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-card/40 backdrop-blur-sm border border-border rounded-3xl p-6 md:p-8 shadow-sm space-y-8"
       >
-        {/* v3.2.0 - UI/UX & Utility Complete Edition */}
+        {/* v3.3.0 - Mensagens com Contexto, Sincronização de Calendário & Retrospectiva */}
         <div className="relative pl-8 border-l-2 border-primary">
           <div className="absolute -left-[11px] top-1 w-5 h-5 bg-primary rounded-full border-4 border-background flex items-center justify-center">
             <Sparkles className="w-2.5 h-2.5 text-white" />
           </div>
           <div className="mb-1 flex items-center gap-2">
             <span className="text-xs font-extrabold text-primary px-3 py-1 bg-primary/10 border border-primary/20 rounded-full">
-              v3.2.0 - Edição Definitiva
+              v3.3.0 - Versão Atual
             </span>
-            <span className="text-xs font-semibold text-foreground/50">Atual</span>
+            <span className="text-xs font-semibold text-emerald-500">Novo</span>
+          </div>
+          <h3 className="text-xl font-extrabold text-foreground mb-2">
+            Mensagens Pessoais com Contexto, Sincronização de Calendário & Retrospectiva
+          </h3>
+          <ul className="space-y-2 text-xs md:text-sm text-foreground/80 leading-relaxed mb-6">
+            <li className="flex items-start gap-2">
+              <GitCommit className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <strong>Editor de Mensagens de Parabéns com Contexto:</strong> Crie mensagens personalizadas escolhendo o tom (Carinhoso, Divertido, Formal, Curto, Emocionante) e selecionando quais dados incluir (apelidos, idade, interesses e lembranças compartilhadas), com envio sempre sob seu controle no WhatsApp ou outros apps.
+            </li>
+            <li className="flex items-start gap-2">
+              <GitCommit className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <strong>Sincronização com Google Agenda & Apple Calendar (.ics):</strong> Exporte todos os aniversários ou adicione individualmente à sua agenda nativa do celular (Google Calendar, iPhone, Outlook) com repetição anual e alarmes automáticos.
+            </li>
+            <li className="flex items-start gap-2">
+              <GitCommit className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <strong>Resumo Anual Pessoal (Retrospectiva):</strong> Visão comemorativa privada com dados do ano, mês mais festivo, contatos favoritos e opção de exportação.
+            </li>
+            <li className="flex items-start gap-2">
+              <GitCommit className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <strong>Lembretes Claros & Diagnóstico:</strong> Status em tempo real das permissões de notificação do navegador, horário preferencial configurável e explicações técnicas transparentes.
+            </li>
+            <li className="flex items-start gap-2">
+              <GitCommit className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <strong>Novo DateInput Responsivo:</strong> Digitação rápida no celular com teclado numérico e máscara DD/MM/AAAA, seletor de calendário nativo integrado e ano mínimo travado a partir de 1910.
+            </li>
+            <li className="flex items-start gap-2">
+              <GitCommit className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+              <strong>Acessibilidade Aprimorada:</strong> Foco visível no teclado, alvos de toque confortáveis e suporte a movimento reduzido.
+            </li>
+          </ul>
+        </div>
+
+        {/* v3.2.0 - UI/UX & Utility Complete Edition */}
+        <div className="relative pl-8 border-l-2 border-border/60">
+          <div className="absolute -left-[11px] top-1 w-5 h-5 bg-border rounded-full border-4 border-background flex items-center justify-center">
+            <CheckCircle2 className="w-2.5 h-2.5 text-foreground/50" />
+          </div>
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-xs font-extrabold text-foreground/70 px-3 py-1 bg-foreground/5 border border-border/40 rounded-full">
+              v3.2.0
+            </span>
           </div>
           <h3 className="text-xl font-extrabold text-foreground mb-2">
             Heatmap Interativo, Linha do Tempo, Estatísticas & Backup Completo

@@ -16,6 +16,8 @@ import {
 import { type Birthday, useBirthdayStore } from '@/store/useBirthdayStore';
 import { calculateBirthdayStats } from '@/utils/dateUtils';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { BirthdayMessageModal } from '@/components/BirthdayMessageModal';
+import { getGoogleCalendarUrl } from '@/utils/calendarExporter';
 import { toast } from '@/store/useToastStore';
 
 interface BirthdayCardProps {
@@ -27,24 +29,21 @@ export function BirthdayCard({ birthday, onClick }: BirthdayCardProps) {
   const { toggleFavorite, setEditingId, setActiveView, removeBirthday } = useBirthdayStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
 
   const { daysLeft, age, isToday, progress, formattedDate, zodiac } = calculateBirthdayStats(birthday.date);
   const isUrgent = daysLeft <= 7 && !isToday;
 
-  const handleWhatsApp = (e: React.MouseEvent) => {
+  const handleOpenMessageModal = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const messages = [
-      `Parabéns pelos seus ${age} anos, ${birthday.name}! 🎉 Desejo muita felicidade e sucesso!`,
-      `Feliz aniversário, ${birthday.name}! Que seus ${age} anos sejam repletos de bênçãos e alegrias! 🎂`,
-      `Grande dia! Parabéns pelo seu aniversário, ${birthday.name}! Aproveite muito seu dia! 🎈`,
-      `Hoje é dia de festa! Parabéns pelos ${age} anos, ${birthday.name}! 🥳`,
-    ];
-    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
-    const phoneStr = birthday.phone ? birthday.phone.replace(/\D/g, '') : '';
-    const url = phoneStr
-      ? `https://wa.me/${phoneStr}?text=${encodeURIComponent(randomMsg)}`
-      : `https://wa.me/?text=${encodeURIComponent(randomMsg)}`;
+    setIsMessageModalOpen(true);
+  };
+
+  const handleAddToCalendar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const url = getGoogleCalendarUrl(birthday);
     window.open(url, '_blank');
+    toast.success(`Abrindo Google Agenda para adicionar o aniversário de ${birthday.name}! 📅`);
   };
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
@@ -138,13 +137,35 @@ export function BirthdayCard({ birthday, onClick }: BirthdayCardProps) {
               </div>
             </div>
 
-            {/* Age Badge */}
-            <div
-              className="w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center font-extrabold text-white shadow-md border-2 border-white/20"
-              style={{ backgroundColor: birthday.color || 'var(--color-primary)' }}
-            >
-              <span className="text-base leading-none">{age}</span>
-              <span className="text-[9px] uppercase tracking-wider opacity-80">anos</span>
+            {/* Age Badge ou Foto com Badge de Idade */}
+            <div className="relative shrink-0">
+              {birthday.photo ? (
+                <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/20 shadow-md relative bg-foreground/5">
+                  <img
+                    src={birthday.photo}
+                    alt={birthday.name}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                    className="w-full h-full object-cover"
+                  />
+                  <div
+                    className="absolute -bottom-1 -right-1 px-1.5 py-0.2 rounded-md text-[9px] font-black text-white shadow"
+                    style={{ backgroundColor: birthday.color || 'var(--color-primary)' }}
+                  >
+                    {age}
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="w-12 h-12 rounded-2xl flex flex-col items-center justify-center font-extrabold text-white shadow-md border-2 border-white/20"
+                  style={{ backgroundColor: birthday.color || 'var(--color-primary)' }}
+                >
+                  <span className="text-base leading-none">{age}</span>
+                  <span className="text-[9px] uppercase tracking-wider opacity-80">anos</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -237,9 +258,19 @@ export function BirthdayCard({ birthday, onClick }: BirthdayCardProps) {
               </button>
 
               <button
+                onClick={handleAddToCalendar}
+                className="p-2 text-foreground/50 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
+                title="Adicionar ao Google Agenda / Calendário"
+                aria-label="Adicionar à agenda"
+              >
+                <CalendarIcon className="w-4 h-4" />
+              </button>
+
+              <button
                 onClick={handleEdit}
                 className="p-2 text-foreground/50 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
                 title="Editar aniversário"
+                aria-label="Editar aniversário"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
@@ -251,14 +282,16 @@ export function BirthdayCard({ birthday, onClick }: BirthdayCardProps) {
                 }}
                 className="p-2 text-foreground/50 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all"
                 title="Excluir aniversário"
+                aria-label="Excluir aniversário"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
 
               <button
-                onClick={handleWhatsApp}
+                onClick={handleOpenMessageModal}
                 className="p-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all hover:scale-105 active:scale-95 shadow-md shadow-emerald-500/20 ml-1"
-                title="Enviar mensagem pelo WhatsApp"
+                title="Preparar e enviar mensagem de parabéns"
+                aria-label="Preparar mensagem de parabéns"
               >
                 <MessageCircle className="w-4 h-4" />
               </button>
@@ -278,6 +311,13 @@ export function BirthdayCard({ birthday, onClick }: BirthdayCardProps) {
         cancelText="Cancelar"
         isDestructive={true}
         isLoading={isDeleting}
+      />
+
+      {/* Birthday Message Modal with Private Context */}
+      <BirthdayMessageModal
+        birthday={birthday}
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
       />
     </>
   );

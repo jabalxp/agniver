@@ -1,5 +1,4 @@
-'use client';
-
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   CalendarDays,
@@ -13,15 +12,21 @@ import {
   Clock,
   BarChart3,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { useBirthdayStore } from '@/store/useBirthdayStore';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { calculateBirthdayStats } from '@/utils/dateUtils';
 import { toast } from '@/store/useToastStore';
+import { UserAvatar } from '@/components/UserAvatar';
+import { CalendarSyncModal } from '@/components/CalendarSyncModal';
+import { YearInReviewModal } from '@/components/YearInReviewModal';
 
 export function MainMenu() {
   const { setActiveView, user, userProfile, setUser, birthdays } = useBirthdayStore();
+  const [isCalendarSyncOpen, setIsCalendarSyncOpen] = useState(false);
+  const [isYearReviewOpen, setIsYearReviewOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -65,24 +70,21 @@ export function MainMenu() {
       {/* Profile / Header Bar */}
       <div className="w-full flex items-center justify-between mb-6 pb-5 border-b border-border/50">
         <button
-          onClick={() => user && setActiveView('profile')}
-          className={`flex items-center gap-3 text-left transition-all ${user ? 'hover:opacity-80 group' : 'cursor-default'}`}
+          onClick={() => setActiveView('profile')}
+          className="flex items-center gap-3 text-left transition-all hover:opacity-80 group cursor-pointer"
         >
-          <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-primary/30 bg-primary/10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-inner">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt={user.displayName || 'User'} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xl font-extrabold text-primary">
-                {userProfile?.name ? getInitial(userProfile.name) : getInitial(user?.displayName || user?.email)}
-              </span>
-            )}
-          </div>
+          <UserAvatar
+            src={user?.photoURL || userProfile?.photoURL}
+            name={userProfile?.name || user?.displayName || user?.email}
+            size="md"
+            className="group-hover:scale-105 transition-transform shadow-inner border-primary/30"
+          />
           <div className="min-w-0">
             <p className="text-[10px] text-foreground/40 font-extrabold uppercase tracking-widest">
-              {user ? 'Meu Perfil' : 'Agniver 2026'}
+              Meu Perfil
             </p>
             <p className="text-base font-extrabold text-foreground truncate">
-              {user ? (userProfile?.name?.split(' ')[0] || getFirstName(user.displayName || user.email)) : 'Olá, Amigo!'}
+              {userProfile?.name?.split(' ')[0] || getFirstName(user?.displayName || user?.email)}
             </p>
           </div>
         </button>
@@ -180,6 +182,24 @@ export function MainMenu() {
 
         <div className="grid grid-cols-2 gap-3 pt-1">
           <button
+            onClick={() => setIsCalendarSyncOpen(true)}
+            className="flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 py-3 px-3 rounded-2xl font-bold text-xs transition-all border border-blue-500/20"
+            title="Sincronizar com Google Agenda e Apple Calendar"
+          >
+            <Calendar className="w-4 h-4" /> Sincronizar Agenda
+          </button>
+
+          <button
+            onClick={() => setIsYearReviewOpen(true)}
+            className="flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 py-3 px-3 rounded-2xl font-bold text-xs transition-all border border-purple-500/20"
+            title="Ver retrospectiva anual das celebrações"
+          >
+            <Sparkles className="w-4 h-4" /> Retrospectiva
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
             onClick={() => setActiveView('changelog')}
             className="flex items-center justify-center gap-2 bg-foreground/5 hover:bg-foreground/10 text-foreground/80 py-3 px-4 rounded-2xl font-bold text-xs transition-all border border-border/60"
           >
@@ -194,6 +214,19 @@ export function MainMenu() {
           </button>
         </div>
       </div>
+
+      {/* Modais de Ação Rápida */}
+      <CalendarSyncModal
+        birthdays={birthdays}
+        isOpen={isCalendarSyncOpen}
+        onClose={() => setIsCalendarSyncOpen(false)}
+      />
+
+      <YearInReviewModal
+        birthdays={birthdays}
+        isOpen={isYearReviewOpen}
+        onClose={() => setIsYearReviewOpen(false)}
+      />
     </motion.div>
   );
 }

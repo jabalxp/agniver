@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, User, AlignLeft, Palette, Save, Phone, Tag, Plus, X, ArrowLeft } from 'lucide-react';
+import { Calendar, User, AlignLeft, Palette, Save, Phone, Tag, Plus, X, ArrowLeft, Camera, Trash2, Sparkles } from 'lucide-react';
 import { useBirthdayStore } from '@/store/useBirthdayStore';
 import { ViewLayout } from '@/components/views/ViewLayout';
 import { toast } from '@/store/useToastStore';
+import { DateInput } from '@/components/DateInput';
 
 const PRESET_COLORS = [
   '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'
@@ -17,13 +18,53 @@ export function AddView() {
   const { addBirthday, setActiveView } = useBirthdayStore();
   const [formData, setFormData] = useState({
     name: '',
+    nickname: '',
     date: '',
     phone: '',
     color: PRESET_COLORS[0],
     notes: '',
+    memories: '',
+    photo: '',
   });
   const [tags, setTags] = useState<string[]>(['Amigos']);
   const [customTagInput, setCustomTagInput] = useState('');
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 250;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxDim) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          }
+        } else {
+          if (height > maxDim) {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          setFormData((prev) => ({ ...prev, photo: compressed }));
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -41,6 +82,14 @@ export function AddView() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.date) {
+      toast.error('Por favor, informe uma data de nascimento válida!');
+      return;
+    }
+    if (formData.date < '1910-01-01') {
+      toast.error('O ano mínimo permitido é 1910!');
+      return;
+    }
     if (formData.date > todayStr) {
       toast.error('A data de nascimento não pode ser no futuro!');
       return;
@@ -88,6 +137,21 @@ export function AddView() {
 
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-2">
+              <User className="w-4 h-4 text-primary" /> Apelido Carinhoso (Opcional)
+            </label>
+            <input
+              type="text"
+              value={formData.nickname}
+              onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+              className="w-full px-4 py-3 bg-background/50 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm font-medium outline-none transition-all"
+              placeholder="Ex: Clarinha, Mãe, Beto..."
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-2">
               <Phone className="w-4 h-4 text-primary" /> Celular (WhatsApp)
             </label>
             <input
@@ -98,22 +162,18 @@ export function AddView() {
               placeholder="Ex: (11) 99999-9999"
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-primary" /> Data de Nascimento *
             </label>
-            <input
+            <DateInput
               required
-              type="date"
-              max={todayStr}
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full px-4 py-3 bg-background/50 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm font-medium outline-none transition-all"
+              onChange={(date) => setFormData({ ...formData, date })}
             />
           </div>
+        </div>
 
           {/* Tags Manager */}
           <div className="space-y-2">
@@ -176,6 +236,65 @@ export function AddView() {
               ))}
             </div>
           </div>
+
+        {/* Foto do Amigo */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-2">
+            <Camera className="w-4 h-4 text-primary" /> Foto do Aniversariante (Opcional)
+          </label>
+          <div className="flex flex-col sm:flex-row items-center gap-4 bg-background/30 p-3.5 rounded-2xl border border-border/50">
+            {formData.photo ? (
+              <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-primary/40 shrink-0">
+                <img
+                  src={formData.photo}
+                  alt="Preview"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, photo: '' }))}
+                  className="absolute inset-0 bg-black/60 text-rose-400 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity font-bold text-[10px]"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-border flex items-center justify-center text-foreground/30 shrink-0">
+                <Camera className="w-6 h-6" />
+              </div>
+            )}
+
+            <div className="flex-1 w-full space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-bold transition-all">
+                  Escolher Imagem
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+                {formData.photo && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, photo: '' }))}
+                    className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 text-xs font-bold transition-all"
+                  >
+                    Remover
+                  </button>
+                )}
+              </div>
+              <input
+                type="url"
+                value={formData.photo}
+                onChange={(e) => setFormData({ ...formData, photo: e.target.value })}
+                placeholder="Ou cole a URL da imagem (https://...)"
+                className="w-full px-3 py-2 bg-background/50 border border-border rounded-xl text-xs font-medium outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -185,8 +304,20 @@ export function AddView() {
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            className="w-full px-4 py-3 bg-background/50 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm font-medium outline-none transition-all min-h-[90px] resize-y"
+            className="w-full px-4 py-3 bg-background/50 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm font-medium outline-none transition-all min-h-[85px] resize-y"
             placeholder="Ex: Gosta de café especial, coleciona canecas, tamanho de calçado 41..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" /> Lembrança ou Momento Marcante (Privado e Opcional)
+          </label>
+          <textarea
+            value={formData.memories}
+            onChange={(e) => setFormData({ ...formData, memories: e.target.value })}
+            className="w-full px-4 py-3 bg-background/50 border border-border rounded-2xl focus:ring-2 focus:ring-primary/50 focus:border-transparent text-sm font-medium outline-none transition-all min-h-[75px] resize-y"
+            placeholder="Ex: Viajamos juntos em 2023, sempre me incentiva nos estudos... (usado para te inspirar nas mensagens de parabéns)"
           />
         </div>
 

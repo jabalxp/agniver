@@ -24,6 +24,7 @@ import { useBirthdayStore, Birthday } from '@/store/useBirthdayStore';
 import { BirthdayCard } from '@/components/features/BirthdayCard';
 import { ViewLayout } from '@/components/views/ViewLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { GridSkeletonLoader } from '@/components/SkeletonLoader';
 import { calculateBirthdayStats, formatDateExtended } from '@/utils/dateUtils';
 import { searchBirthdays } from '@/utils/searchEngine';
 import { ImportExportModal } from '@/components/ImportExportModal';
@@ -31,7 +32,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from '@/store/useToastStore';
 
 export function DashboardView() {
-  const { birthdays, setActiveView, setEditingId, removeBirthday, toggleFavorite } = useBirthdayStore();
+  const { birthdays, isLoadingBirthdays, setActiveView, setEditingId, removeBirthday, toggleFavorite } = useBirthdayStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [period, setPeriod] = useState<'all' | '30days' | 'month' | 'quarter'>('all');
   const [sortBy, setSortBy] = useState<'proximity' | 'name' | 'date' | 'age'>('proximity');
@@ -248,7 +249,9 @@ export function DashboardView() {
       </div>
 
       {/* Main Content Area */}
-      {sorted.length === 0 ? (
+      {isLoadingBirthdays ? (
+        <GridSkeletonLoader count={6} />
+      ) : sorted.length === 0 ? (
         <EmptyState
           type={searchQuery || period !== 'all' || selectedTag ? 'no-search-results' : 'no-birthdays'}
           onAction={() => {

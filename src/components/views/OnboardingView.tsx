@@ -16,6 +16,9 @@ import {
 import { useBirthdayStore } from '@/store/useBirthdayStore';
 import { ViewLayout } from '@/components/views/ViewLayout';
 import { toast } from '@/store/useToastStore';
+import { DateInput } from '@/components/DateInput';
+import { db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const TOUR_STEPS = [
   {
@@ -72,13 +75,37 @@ export function OnboardingView() {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const handleFinish = (e?: React.FormEvent) => {
+  const handleFinish = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    if (birthDate && birthDate < '1910-01-01') {
+      toast.error('O ano mínimo permitido é 1910!');
+      return;
+    }
+    if (birthDate && birthDate > todayStr) {
+      toast.error('A data de nascimento não pode ser no futuro!');
+      return;
+    }
+
     if (name) {
+      if (user && db && db.app) {
+        try {
+          await setDoc(
+            doc(db, 'users', user.uid),
+            {
+              name,
+              birthDate: birthDate || '',
+            },
+            { merge: true }
+          );
+        } catch (err) {
+          console.warn('Erro ao salvar perfil no Firestore:', err);
+        }
+      }
+
       setUserProfile({
         name,
-        birthDate: birthDate || '2000-01-01',
+        birthDate: birthDate || '',
       });
     }
 
@@ -160,12 +187,9 @@ export function OnboardingView() {
                 <label className="text-xs font-bold uppercase tracking-wider text-foreground/70 flex items-center gap-1.5 ml-1">
                   <Calendar className="w-3.5 h-3.5 text-primary" /> Seu Aniversário (Opcional)
                 </label>
-                <input
-                  type="date"
-                  max={todayStr}
+                <DateInput
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  className="w-full px-4 py-3 bg-background/50 border border-border rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-primary/50"
+                  onChange={(date) => setBirthDate(date)}
                 />
               </div>
             </form>
